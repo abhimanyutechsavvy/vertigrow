@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>VertiGrow Dashboard</title>
+<style>
+body{background:#0f172a;color:#e5e7eb;font-family:Arial}
+.card{background:#020617;border:1px solid #1e293b;padding:20px;border-radius:10px;margin:10px}
+.value{font-size:30px;color:#22c55e}
+button{padding:10px;background:#38bdf8;border:none;font-weight:bold}
+</style>
+</head>
+
+<body>
+
+<h1>VertiGrow – Smart Auto Hydroponics</h1>
+
+<div class="card">pH: <span id="ph" class="value">--</span></div>
+<div class="card">TDS: <span id="tds" class="value">--</span></div>
+<div class="card">Water Pump: <span id="water">--</span></div>
+<div class="card">NPK A: <span id="npkA">--</span></div>
+<div class="card">NPK B: <span id="npkB">--</span></div>
+<div class="card">Plant Health: <span id="health">--</span></div>
+
+<button onclick="exportExcel()">Download Excel</button>
+
+<script>
+let logs=[];
+
+async function fetchData(){
+  const res = await fetch("/api/data");
+  const d = await res.json();
+
+  ph.innerText = d.ph.toFixed(2);
+  tds.innerText = d.tds+" ppm";
+  water.innerText = d.waterPump?"ON":"OFF";
+  npkA.innerText = d.npkA?"ON":"OFF";
+  npkB.innerText = d.npkB?"ON":"OFF";
+
+  let health = (d.waterPump||d.npkA||d.npkB)?"OPTIMIZING":"EXCELLENT";
+  document.getElementById("health").innerText = health;
+
+  logs.push({
+    time:new Date().toLocaleString(),
+    ...d,
+    health
+  });
+}
+
+function exportExcel(){
+  let csv="Time,pH,TDS,Water,NPKA,NPKB,Health\n";
+  logs.forEach(l=>{
+    csv+=`${l.time},${l.ph},${l.tds},${l.waterPump},${l.npkA},${l.npkB},${l.health}\n`;
+  });
+  let blob=new Blob([csv],{type:"text/csv"});
+  let a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="VertiGrow_Data.csv";
+  a.click();
+}
+
+setInterval(fetchData,5000);
+</script>
+
+</body>
+</html>
