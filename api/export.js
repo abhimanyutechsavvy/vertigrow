@@ -8,8 +8,10 @@ export default function handler(req, res) {
 
     const history = globalThis.__VERTIGROW_HISTORY__ || [];
 
-    if (history.length === 0) {
-      return res.status(200).send("No data available");
+    if (!history || history.length === 0) {
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "text/plain");
+      return res.end("No data available");
     }
 
     const worksheet = XLSX.utils.json_to_sheet(history);
@@ -21,6 +23,8 @@ export default function handler(req, res) {
       bookType: "xlsx"
     });
 
+    // IMPORTANT: headers first
+    res.statusCode = 200;
     res.setHeader(
       "Content-Disposition",
       "attachment; filename=vertigrow_report.xlsx"
@@ -29,11 +33,14 @@ export default function handler(req, res) {
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
+    res.setHeader("Content-Length", buffer.length);
 
-    res.send(buffer);
+    // IMPORTANT: end(), NOT send()
+    return res.end(buffer);
 
   } catch (err) {
     console.error("EXPORT ERROR:", err);
-    res.status(500).send("Excel export failed");
+    res.statusCode = 500;
+    return res.end("Excel export failed");
   }
 }
