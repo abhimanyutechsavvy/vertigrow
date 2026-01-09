@@ -1,56 +1,99 @@
-export const config = {
-  runtime: "nodejs"
-};
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>VertiGrow AI</title>
 
-export default async function handler(req, res) {
-  try {
-    if (req.method !== "POST") {
-      return res.status(200).json({ reply: "Use POST" });
+  <style>
+    body {
+      margin: 0;
+      background: #050812;
+      color: #e0e6ff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(200).json({ reply: "OPENAI KEY MISSING" });
+    .panel {
+      width: 360px;
+      background: #0b132b;
+      padding: 20px;
+      border-radius: 14px;
+      box-shadow: 0 0 30px rgba(0,255,255,0.2);
     }
 
-    const { message, sensorData } = req.body || {};
-    const userMessage = message || "hi";
+    h1 {
+      text-align: center;
+      color: #00f7ff;
+    }
 
-    const systemPrompt = `
-You are VertiGrow AI.
-Explain simply.
+    .vitals {
+      display: flex;
+      justify-content: space-between;
+      margin: 15px 0;
+    }
 
-Current vitals:
-pH: ${sensorData?.ph ?? "unknown"}
-TDS: ${sensorData?.tds ?? "unknown"}
-`;
+    .card {
+      width: 30%;
+      background: #101833;
+      padding: 10px;
+      border-radius: 10px;
+      text-align: center;
+    }
 
-    const aiRes = await fetch(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          temperature: 0.4,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userMessage }
-          ]
-        })
-      }
-    );
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: none;
+    }
 
-    const data = await aiRes.json();
-    const reply =
-      data?.choices?.[0]?.message?.content || "No AI reply";
+    button {
+      background: #00f7ff;
+      font-weight: bold;
+      cursor: pointer;
+    }
 
-    return res.json({ reply });
+    .reply {
+      margin-top: 12px;
+      min-height: 50px;
+      background: #101833;
+      padding: 10px;
+      border-radius: 8px;
+    }
+  </style>
+</head>
 
-  } catch (err) {
-    console.error(err);
-    return res.json({ reply: "AI error" });
-  }
-}
+<body>
+  <div class="panel">
+    <h1>VertiGrow AI</h1>
+
+    <div class="vitals">
+      <div class="card">
+        <div>pH</div>
+        <div id="phValue">--</div>
+      </div>
+      <div class="card">
+        <div>TDS</div>
+        <div id="tdsValue">--</div>
+      </div>
+      <div class="card">
+        <div>Health</div>
+        <div id="healthValue">--</div>
+      </div>
+    </div>
+
+    <input id="aiInput" placeholder="Ask anything…" />
+    <button onclick="sendAI()">Send</button>
+
+    <div class="reply" id="aiReply">
+      AI response will appear here…
+    </div>
+  </div>
+
+  <script src="/ai.js"></script>
+</body>
+</html>
