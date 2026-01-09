@@ -1,18 +1,26 @@
 import OpenAI from "openai";
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ reply: "Method not allowed" });
-  }
-
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(500).json({
-      reply: "OpenAI key missing on server."
-    });
-  }
-
+  // Always respond, no silent exits
   try {
-    const { message, sensorData } = req.body;
+    console.log("AI endpoint hit");
+
+    if (req.method !== "POST") {
+      return res.status(200).json({ reply: "Use POST method" });
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      console.log("Missing API key");
+      return res.status(200).json({
+        reply: "Server missing OpenAI key"
+      });
+    }
+
+    const body = req.body || {};
+    console.log("Request body:", body);
+
+    const message = body.message || "hi";
+    const sensorData = body.sensorData || body.sensor || {};
 
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY
@@ -23,22 +31,27 @@ export default async function handler(req, res) {
       messages: [
         {
           role: "system",
-          content: `You are VertiGrow AI. 
-          pH=${sensorData.ph}, TDS=${sensorData.tds}. 
-          Explain clearly for beginners.`
+          content: `You are VertiGrow AI.
+pH=${sensorData.ph ?? "unknown"}
+TDS=${sensorData.tds ?? "unknown"}`
         },
-        { role: "user", content: message }
+        {
+          role: "user",
+          content: message
+        }
       ]
     });
 
-    res.status(200).json({
-      reply: completion.choices[0].message.content
-    });
+    const reply =
+      completion?.choices?.[0]?.message?.content ||
+      "AI responded but no text.";
+
+    return res.status(200).json({ reply });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      reply: "AI failed to respond."
+    console.error("AI ERROR FULL:", err);
+    return res.status(200).json({
+      reply: "AI error occurred, check backend logs"
     });
   }
 }
