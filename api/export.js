@@ -4,16 +4,19 @@ export const config = {
 
 export default function handler(req, res) {
   try {
+    // Load XLSX safely (Node only)
     const XLSX = require("xlsx");
 
+    // Read global history
     const history = globalThis.__VERTIGROW_HISTORY__ || [];
 
-    if (!history || history.length === 0) {
+    if (history.length === 0) {
       res.statusCode = 200;
       res.setHeader("Content-Type", "text/plain");
       return res.end("No data available");
     }
 
+    // Create Excel
     const worksheet = XLSX.utils.json_to_sheet(history);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "VertiGrow Report");
@@ -23,7 +26,7 @@ export default function handler(req, res) {
       bookType: "xlsx"
     });
 
-    // IMPORTANT: headers first
+    // IMPORTANT: set headers BEFORE ending
     res.statusCode = 200;
     res.setHeader(
       "Content-Disposition",
@@ -35,7 +38,7 @@ export default function handler(req, res) {
     );
     res.setHeader("Content-Length", buffer.length);
 
-    // IMPORTANT: end(), NOT send()
+    // Send binary correctly
     return res.end(buffer);
 
   } catch (err) {
