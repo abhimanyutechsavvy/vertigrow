@@ -28,9 +28,8 @@ async function fetchVitals() {
     const healthEl = document.getElementById("healthValue");
     healthEl.innerText = health;
     healthEl.className = `value ${cls}`;
-
   } catch (e) {
-    console.error("Vitals error:", e);
+    console.error(e);
   }
 }
 
@@ -58,13 +57,16 @@ async function sendAICommand() {
 
     const data = await aiRes.json();
     replyBox.innerText = data.reply || "No reply from AI";
-
   } catch (err) {
-    console.error(err);
     replyBox.innerText = "AI is offline or error occurred";
   }
 
   input.value = "";
+}
+
+// ✅ EXCEL DOWNLOAD
+function downloadReport() {
+  window.open("/api/export", "_blank");
 }
 
 setInterval(fetchVitals, 3000);
