@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json({
-      reply: "OPENAI KEY EXISTS, READY FOR AI"
+      reply: "OPENAI KEY FOUND AND READY"
     });
   } catch (e) {
     return res.status(500).json({
