@@ -1,44 +1,44 @@
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
-
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
+  if (req.method !== "POST") {
+    return res.status(405).json({ reply: "Method not allowed" });
+  }
 
-  const { message, sensor } = req.body;
+  if (!process.env.OPENAI_API_KEY) {
+    return res.status(500).json({
+      reply: "OpenAI key missing on server."
+    });
+  }
 
-  const prompt = `
-You control a hydroponics system.
+  try {
+    const { message, sensorData } = req.body;
 
-Sensor data:
-pH: ${sensor.ph}
-TDS: ${sensor.tds}
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
 
-User says:
-"${message}"
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You are VertiGrow AI. 
+          pH=${sensorData.ph}, TDS=${sensorData.tds}. 
+          Explain clearly for beginners.`
+        },
+        { role: "user", content: message }
+      ]
+    });
 
-Choose ONLY ONE action:
-- npkA_on
-- npkA_off
-- npkB_on
-- npkB_off
-- status
-- none
+    res.status(200).json({
+      reply: completion.choices[0].message.content
+    });
 
-Reply ONLY JSON:
-{
-  "action": "...",
-  "reply": "short explanation"
-}
-`;
-
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4.1-mini",
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0
-  });
-
-  res.json(JSON.parse(completion.choices[0].message.content));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      reply: "AI failed to respond."
+    });
+  }
 }
