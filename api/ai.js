@@ -1,72 +1,73 @@
-export const config = {
-  runtime: "nodejs"
-};
-
-export default async function handler(req, res) {
+async function fetchVitals() {
   try {
-    // Allow POST only
-    if (req.method !== "POST") {
-      return res.status(200).json({ reply: "Use POST method" });
+    const res = await fetch("/api/data");
+    const data = await res.json();
+
+    const ph = Number(data.ph);
+    const tds = Number(data.tds);
+
+    document.getElementById("phValue").innerText =
+      isNaN(ph) ? "--" : ph.toFixed(2);
+
+    document.getElementById("tdsValue").innerText =
+      isNaN(tds) ? "--" : tds;
+
+    let health = "GOOD";
+    let cls = "good";
+
+    if (ph < 5.5 || ph > 6.8 || tds < 700 || tds > 1400) {
+      health = "WARNING";
+      cls = "warn";
     }
 
-    // Check API key
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(200).json({
-        reply: "OPENAI KEY NOT FOUND"
-      });
+    if (ph < 5.0 || ph > 7.2 || tds < 500 || tds > 1800) {
+      health = "CRITICAL";
+      cls = "bad";
     }
 
-    const body = req.body || {};
-    const message = body.message || "hi";
-    const sensorData = body.sensorData || {};
+    const healthEl = document.getElementById("healthValue");
+    healthEl.innerText = health;
+    healthEl.className = `value ${cls}`;
+  } catch (e) {
+    console.error(e);
+  }
+}
 
-    // Build prompt
-    const systemPrompt = `
-You are VertiGrow AI, a beginner-friendly hydroponics assistant.
+async function sendAICommand() {
+  const input = document.getElementById("aiInput");
+  const replyBox = document.getElementById("aiReply");
 
-Current sensor vitals:
-pH: ${sensorData.ph ?? "unknown"}
-TDS: ${sensorData.tds ?? "unknown"}
+  const message = input.value.trim();
+  if (!message) return;
 
-Explain things simply. Do not give electrical wiring or chemical quantities.
-`;
+  replyBox.innerText = "Thinking…";
 
-    // Call OpenAI using fetch (NO SDK)
-    const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+  try {
+    const sensorRes = await fetch("/api/data");
+    const sensor = await sensorRes.json();
+
+    const aiRes = await fetch("/api/ai", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: message }
-        ],
-        temperature: 0.4
+        message,
+        sensorData: sensor
       })
     });
 
-    if (!aiResponse.ok) {
-      const errText = await aiResponse.text();
-      console.error("OpenAI API error:", errText);
-      return res.status(200).json({
-        reply: "OpenAI API error"
-      });
-    }
-
-    const aiData = await aiResponse.json();
-    const reply =
-      aiData?.choices?.[0]?.message?.content ||
-      "AI responded but no text.";
-
-    return res.status(200).json({ reply });
-
-  } catch (error) {
-    console.error("AI FUNCTION ERROR:", error);
-    return res.status(200).json({
-      reply: "AI backend error"
-    });
+    const data = await aiRes.json();
+    replyBox.innerText = data.reply || "No reply from AI";
+  } catch (err) {
+    replyBox.innerText = "AI is offline or error occurred";
   }
+
+  input.value = "";
 }
+
+// ✅ EXCEL DOWNLOAD
+function downloadReport() {
+  window.open("/api/export", "_blank");
+}
+
+setInterval(fetchVitals, 3000);
+fetchVitals();
