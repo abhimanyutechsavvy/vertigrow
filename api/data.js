@@ -1,31 +1,56 @@
-// GLOBAL STORAGE (safe for Vercel serverless)
-globalThis.__VERTIGROW_HISTORY__ =
-  globalThis.__VERTIGROW_HISTORY__ || [];
+export const config = {
+  runtime: "nodejs"
+};
 
-export default function handler(req, res) {
-  if (req.method === "POST") {
-    const entry = {
-      ph: req.body.ph,
-      tds: req.body.tds,
-      time: new Date().toISOString()
-    };
-
-    globalThis.__VERTIGROW_HISTORY__.push(entry);
-
-    // keep last 500 records
-    if (globalThis.__VERTIGROW_HISTORY__.length > 500) {
-      globalThis.__VERTIGROW_HISTORY__.shift();
+export default async function handler(req, res) {
+  try {
+    if (req.method !== "POST") {
+      return res.status(200).json({ reply: "Use POST" });
     }
 
-    return res.json({ ok: true });
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(200).json({ reply: "OPENAI KEY MISSING" });
+    }
+
+    const { message, sensorData } = req.body || {};
+    const userMessage = message || "hi";
+
+    const systemPrompt = `
+You are VertiGrow AI.
+Explain simply.
+
+Current vitals:
+pH: ${sensorData?.ph ?? "unknown"}
+TDS: ${sensorData?.tds ?? "unknown"}
+`;
+
+    const aiRes = await fetch(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          temperature: 0.4,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userMessage }
+          ]
+        })
+      }
+    );
+
+    const data = await aiRes.json();
+    const reply =
+      data?.choices?.[0]?.message?.content || "No AI reply";
+
+    return res.json({ reply });
+
+  } catch (err) {
+    console.error(err);
+    return res.json({ reply: "AI error" });
   }
-
-  // GET → latest reading
-  const history = globalThis.__VERTIGROW_HISTORY__;
-
-  if (!history || history.length === 0) {
-    return res.json({ ph: 0, tds: 0 });
-  }
-
-  return res.json(history[history.length - 1]);
 }
