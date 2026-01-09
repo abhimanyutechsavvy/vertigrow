@@ -1,77 +1,52 @@
-async function fetchVitals() {
+export const config = {
+  runtime: "nodejs"
+};
+
+export default function handler(req, res) {
   try {
-    const res = await fetch("/api/data");
-    const data = await res.json();
+    // ALLOW GET ONLY (downloads are GET)
+    if (req.method !== "GET") {
+      res.statusCode = 405;
+      return res.end("Method Not Allowed");
+    }
 
-    document.getElementById("phValue").innerText =
-      data.ph ? Number(data.ph).toFixed(2) : "--";
+    const XLSX = require("xlsx");
 
-    document.getElementById("tdsValue").innerText =
-      data.tds ?? "--";
+    const history = globalThis.__VERTIGROW_HISTORY__ || [];
 
-  } catch {}
-}
+    if (history.length === 0) {
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "text/plain");
+      return res.end("No data available");
+    }
 
-async function sendAICommand() {
-  const input = document.getElementById("aiInput");
-  const replyBox = document.getElementById("aiReply");
+    // Create Excel
+    const worksheet = XLSX.utils.json_to_sheet(history);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "VertiGrow Report");
 
-  const message = input.value.trim();
-  if (!message) return;
-
-  replyBox.innerText = "Thinking…";
-
-  try {
-    const sensorRes = await fetch("/api/data");
-    const sensor = await sensorRes.json();
-
-    const aiRes = await fetch("/api/ai", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message,
-        sensorData: sensor
-      })
+    const buffer = XLSX.write(workbook, {
+      type: "buffer",
+      bookType: "xlsx"
     });
 
-    const data = await aiRes.json();
-    replyBox.innerText = data.reply;
-  } catch {
-    replyBox.innerText = "AI error";
-  }
+    // Send file
+    res.statusCode = 200;
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=vertigrow_report.xlsx"
+    );
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader("Content-Length", buffer.length);
 
-  input.value = "";
-}
+    return res.end(buffer);
 
-// ✅ FINAL EXCEL EXPORT (NO SERVERLESS STATE)
-async function downloadReport() {
-  try {
-    // Example history (Arduino can send real one)
-    const history = [
-      { ph: 6.1, tds: 980, time: new Date().toISOString() },
-      { ph: 6.0, tds: 970, time: new Date().toISOString() }
-    ];
-
-    const res = await fetch("/api/export", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ history })
-    });
-
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "vertigrow_report.xlsx";
-    a.click();
-
-    URL.revokeObjectURL(url);
-
-  } catch {
-    alert("Excel export failed");
+  } catch (err) {
+    console.error("EXPORT ERROR:", err);
+    res.statusCode = 500;
+    return res.end("Excel export failed");
   }
 }
-
-setInterval(fetchVitals, 3000);
-fetchVitals();
