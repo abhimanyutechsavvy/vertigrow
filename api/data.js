@@ -1,4 +1,6 @@
-let history = [];
+// GLOBAL STORAGE (safe for Vercel serverless)
+globalThis.__VERTIGROW_HISTORY__ =
+  globalThis.__VERTIGROW_HISTORY__ || [];
 
 export default function handler(req, res) {
   if (req.method === "POST") {
@@ -8,23 +10,22 @@ export default function handler(req, res) {
       time: new Date().toISOString()
     };
 
-    history.push(entry);
+    globalThis.__VERTIGROW_HISTORY__.push(entry);
 
     // keep last 500 records
-    if (history.length > 500) history.shift();
+    if (globalThis.__VERTIGROW_HISTORY__.length > 500) {
+      globalThis.__VERTIGROW_HISTORY__.shift();
+    }
 
     return res.json({ ok: true });
   }
 
-  // GET → return latest reading
-  if (history.length === 0) {
+  // GET → latest reading
+  const history = globalThis.__VERTIGROW_HISTORY__;
+
+  if (!history || history.length === 0) {
     return res.json({ ph: 0, tds: 0 });
   }
 
   return res.json(history[history.length - 1]);
-}
-
-// used by export.js
-export function getHistory() {
-  return history;
 }
