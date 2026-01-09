@@ -1,52 +1,50 @@
-export const config = {
-  runtime: "nodejs"
-};
+async function fetchVitals() {
+  const res = await fetch("/api/data");
+  const data = await res.json();
 
-export default function handler(req, res) {
-  try {
-    // ALLOW GET ONLY (downloads are GET)
-    if (req.method !== "GET") {
-      res.statusCode = 405;
-      return res.end("Method Not Allowed");
-    }
+  const ph = Number(data.ph);
+  const tds = Number(data.tds);
 
-    const XLSX = require("xlsx");
+  document.getElementById("phValue").innerText =
+    isNaN(ph) ? "--" : ph.toFixed(2);
 
-    const history = globalThis.__VERTIGROW_HISTORY__ || [];
+  document.getElementById("tdsValue").innerText =
+    isNaN(tds) ? "--" : tds;
 
-    if (history.length === 0) {
-      res.statusCode = 200;
-      res.setHeader("Content-Type", "text/plain");
-      return res.end("No data available");
-    }
-
-    // Create Excel
-    const worksheet = XLSX.utils.json_to_sheet(history);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "VertiGrow Report");
-
-    const buffer = XLSX.write(workbook, {
-      type: "buffer",
-      bookType: "xlsx"
-    });
-
-    // Send file
-    res.statusCode = 200;
-    res.setHeader(
-      "Content-Disposition",
-      "attachment; filename=vertigrow_report.xlsx"
-    );
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
-    res.setHeader("Content-Length", buffer.length);
-
-    return res.end(buffer);
-
-  } catch (err) {
-    console.error("EXPORT ERROR:", err);
-    res.statusCode = 500;
-    return res.end("Excel export failed");
+  let health = "GOOD";
+  if (ph < 5.5 || ph > 6.8 || tds < 700 || tds > 1400) {
+    health = "WARN";
   }
+  if (ph < 5 || ph > 7.2 || tds < 500 || tds > 1800) {
+    health = "BAD";
+  }
+
+  document.getElementById("healthValue").innerText = health;
 }
+
+async function sendAI() {
+  const input = document.getElementById("aiInput");
+  const reply = document.getElementById("aiReply");
+
+  const message = input.value.trim();
+  if (!message) return;
+
+  reply.innerText = "Thinking…";
+
+  const sensorRes = await fetch("/api/data");
+  const sensorData = await sensorRes.json();
+
+  const res = await fetch("/api/ai", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, sensorData })
+  });
+
+  const data = await res.json();
+  reply.innerText = data.reply || "No reply";
+
+  input.value = "";
+}
+
+setInterval(fetchVitals, 3000);
+fetchVitals();
