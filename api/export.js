@@ -2,18 +2,21 @@ export const config = {
   runtime: "nodejs"
 };
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   try {
-    // Load XLSX safely (Node only)
+    if (req.method !== "POST") {
+      res.status(200).json({ error: "Use POST" });
+      return;
+    }
+
     const XLSX = require("xlsx");
 
-    // Read global history
-    const history = globalThis.__VERTIGROW_HISTORY__ || [];
+    const body = req.body || {};
+    const history = body.history || [];
 
-    if (history.length === 0) {
-      res.statusCode = 200;
-      res.setHeader("Content-Type", "text/plain");
-      return res.end("No data available");
+    if (!Array.isArray(history) || history.length === 0) {
+      res.status(200).json({ error: "NO_DATA" });
+      return;
     }
 
     // Create Excel
@@ -26,8 +29,6 @@ export default function handler(req, res) {
       bookType: "xlsx"
     });
 
-    // IMPORTANT: set headers BEFORE ending
-    res.statusCode = 200;
     res.setHeader(
       "Content-Disposition",
       "attachment; filename=vertigrow_report.xlsx"
@@ -36,14 +37,11 @@ export default function handler(req, res) {
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
-    res.setHeader("Content-Length", buffer.length);
 
-    // Send binary correctly
-    return res.end(buffer);
+    res.status(200).end(buffer);
 
   } catch (err) {
     console.error("EXPORT ERROR:", err);
-    res.statusCode = 500;
-    return res.end("Excel export failed");
+    res.status(500).json({ error: "EXPORT_FAILED" });
   }
 }
