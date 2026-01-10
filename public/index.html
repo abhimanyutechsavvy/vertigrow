@@ -47,7 +47,6 @@
       margin: 0 0 20px;
       text-align: center;
       font-size: 26px;
-      letter-spacing: 0.5px;
       color: var(--accent);
       text-shadow: 0 0 12px rgba(0, 247, 255, 0.5);
     }
@@ -62,17 +61,16 @@
     .card {
       background: var(--bg-card);
       border-radius: 12px;
-      padding: 14px 10px;
+      padding: 14px;
       text-align: center;
       box-shadow:
-        inset 0 0 0 1px rgba(255, 255, 255, 0.05),
-        0 8px 18px rgba(0, 0, 0, 0.5);
+        inset 0 0 0 1px rgba(255,255,255,0.05),
+        0 8px 18px rgba(0,0,0,0.5);
     }
 
     .card div:first-child {
       font-size: 13px;
       color: var(--muted);
-      letter-spacing: 0.5px;
     }
 
     .value {
@@ -90,15 +88,11 @@
       padding: 14px;
       border-radius: 10px;
       border: none;
-      outline: none;
       background: var(--bg-card);
       color: #fff;
-      font-size: 15px;
       margin-bottom: 10px;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+      font-size: 15px;
     }
-
-    input::placeholder { color: #7e86ad; }
 
     button {
       width: 100%;
@@ -108,22 +102,18 @@
       font-size: 16px;
       font-weight: 700;
       cursor: pointer;
+      margin-top: 10px;
       color: #002b2e;
       background: linear-gradient(135deg, #00f7ff, #00c8d4);
-      box-shadow: 0 10px 20px rgba(0,247,255,0.35);
-      margin-top: 6px;
     }
 
     .reply {
-      margin-top: 16px;
+      margin-top: 14px;
       padding: 14px;
       min-height: 60px;
       background: var(--bg-card);
       border-radius: 12px;
       font-size: 14px;
-      line-height: 1.5;
-      color: #dbe2ff;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
     }
   </style>
 </head>
@@ -132,6 +122,7 @@
   <div class="panel">
     <h1>VertiGrow AI</h1>
 
+    <!-- LIVE VITALS -->
     <div class="vitals">
       <div class="card">
         <div>pH</div>
@@ -147,21 +138,67 @@
       </div>
     </div>
 
-    <input
-      id="aiInput"
-      type="text"
-      placeholder="Ask anything about your plants…"
-    />
+    <!-- AI -->
+    <input id="aiInput" placeholder="Ask anything… add nutrients" />
+    <button onclick="sendAICommand()">Send</button>
 
-    <button onclick="sendAI()">Send</button>
+    <div class="reply" id="aiReply">AI response will appear here…</div>
 
-    <button onclick="downloadExcel()">Download Excel</button>
-
-    <div class="reply" id="aiReply">
-      AI response will appear here…
-    </div>
+    <button onclick="downloadExcel()">Download Excel Report</button>
   </div>
 
-  <script src="/ai.js"></script>
+  <script>
+    async function updateVitals() {
+      try {
+        const res = await fetch("/api/data", { method: "POST" });
+        const data = await res.json();
+
+        document.getElementById("phValue").innerText = data.ph ?? "--";
+        document.getElementById("tdsValue").innerText = data.tds ?? "--";
+
+        const healthEl = document.getElementById("healthValue");
+        healthEl.className = "value";
+
+        if (data.ph >= 5.8 && data.ph <= 6.5 && data.tds >= 800 && data.tds <= 1200) {
+          healthEl.innerText = "GOOD";
+          healthEl.classList.add("good");
+        } else if (
+          (data.ph >= 5.5 && data.ph < 5.8) ||
+          (data.ph > 6.5 && data.ph <= 6.8)
+        ) {
+          healthEl.innerText = "MODERATE";
+          healthEl.classList.add("warn");
+        } else {
+          healthEl.innerText = "BAD";
+          healthEl.classList.add("bad");
+        }
+      } catch {
+        console.log("Vitals fetch failed");
+      }
+    }
+
+    async function sendAICommand() {
+      const message = document.getElementById("aiInput").value;
+      if (!message) return;
+
+      document.getElementById("aiReply").innerText = "Thinking…";
+
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message })
+      });
+
+      const data = await res.json();
+      document.getElementById("aiReply").innerText = data.reply || "No response";
+    }
+
+    function downloadExcel() {
+      window.location.href = "/api/excel";
+    }
+
+    updateVitals();
+    setInterval(updateVitals, 5000);
+  </script>
 </body>
 </html>
