@@ -6,15 +6,15 @@ export default function handler(req, res) {
       return res.status(405).end();
     }
 
-    const store = globalThis.__VERTIGROW_STORE__;
+    const latest = globalThis.__VERTIGROW_LATEST__;
 
-    if (!store || store.history.length === 0) {
+    if (!latest || !latest.time) {
       return res.status(200).send("No data available");
     }
 
-    const worksheet = XLSX.utils.json_to_sheet(store.history);
+    const worksheet = XLSX.utils.json_to_sheet([latest]);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "VertiGrow Data");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "VertiGrow");
 
     const buffer = XLSX.write(workbook, {
       bookType: "xlsx",
