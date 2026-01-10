@@ -2,29 +2,24 @@ export const config = {
   runtime: "nodejs"
 };
 
-export default async function handler(req, res) {
+export default function handler(req, res) {
   try {
-    if (req.method !== "POST") {
-      res.status(200).json({ error: "Use POST" });
-      return;
+    if (req.method !== "GET") {
+      return res.status(405).end();
     }
 
     const XLSX = require("xlsx");
+    const history = globalThis.__VERTIGROW_HISTORY__ || [];
 
-    const body = req.body || {};
-    const history = body.history || [];
-
-    if (!Array.isArray(history) || history.length === 0) {
-      res.status(200).json({ error: "NO_DATA" });
-      return;
+    if (!history.length) {
+      return res.end();
     }
 
-    // Create Excel
-    const worksheet = XLSX.utils.json_to_sheet(history);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "VertiGrow Report");
+    const ws = XLSX.utils.json_to_sheet(history);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "VertiGrow");
 
-    const buffer = XLSX.write(workbook, {
+    const buffer = XLSX.write(wb, {
       type: "buffer",
       bookType: "xlsx"
     });
@@ -38,10 +33,8 @@ export default async function handler(req, res) {
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
 
-    res.status(200).end(buffer);
-
-  } catch (err) {
-    console.error("EXPORT ERROR:", err);
-    res.status(500).json({ error: "EXPORT_FAILED" });
+    res.end(buffer);
+  } catch {
+    res.end();
   }
 }
