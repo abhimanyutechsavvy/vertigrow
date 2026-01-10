@@ -1,18 +1,22 @@
 import XLSX from "xlsx";
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   try {
     if (req.method !== "GET") {
       return res.status(405).end();
     }
 
-    const latest = globalThis.__VERTIGROW_LATEST__;
+    // 🔥 FETCH LATEST DATA DIRECTLY
+    const dataRes = await fetch(
+      "https://vertigrow-dusky.vercel.app/api/data"
+    );
+    const data = await dataRes.json();
 
-    if (!latest || !latest.time) {
+    if (!data || !data.time) {
       return res.status(200).send("No data available");
     }
 
-    const worksheet = XLSX.utils.json_to_sheet([latest]);
+    const worksheet = XLSX.utils.json_to_sheet([data]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "VertiGrow");
 
@@ -30,10 +34,9 @@ export default function handler(req, res) {
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
 
-    res.status(200).send(buffer);
+    return res.status(200).send(buffer);
 
-  } catch (err) {
-    console.error("EXCEL ERROR:", err);
-    res.status(500).send("Excel export failed");
+  } catch (e) {
+    return res.status(500).send("Excel export failed");
   }
 }
