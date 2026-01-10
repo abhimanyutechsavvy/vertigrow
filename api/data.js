@@ -1,44 +1,25 @@
 // /api/data.js
-// FINAL: stores latest + history for Excel
+// FINAL: stores ONLY latest reading (serverless-safe)
 
-globalThis.__VERTIGROW_STORE__ =
-  globalThis.__VERTIGROW_STORE__ || {
-    latest: null,
-    history: []
-  };
+globalThis.__VERTIGROW_LATEST__ =
+  globalThis.__VERTIGROW_LATEST__ || { ph: 0, tds: 0, time: null };
 
 export default function handler(req, res) {
 
-  // ===== ARDUINO SENDS DATA =====
+  // Arduino sends data
   if (req.method === "POST") {
-    const ph = Number(req.body.ph);
-    const tds = Number(req.body.tds);
-
-    const record = {
-      ph,
-      tds,
+    globalThis.__VERTIGROW_LATEST__ = {
+      ph: Number(req.body.ph),
+      tds: Number(req.body.tds),
       time: new Date().toISOString()
     };
-
-    // save latest
-    globalThis.__VERTIGROW_STORE__.latest = record;
-
-    // save history
-    globalThis.__VERTIGROW_STORE__.history.push(record);
-
-    // keep history size safe
-    if (globalThis.__VERTIGROW_STORE__.history.length > 1000) {
-      globalThis.__VERTIGROW_STORE__.history.shift();
-    }
 
     return res.status(200).json({ ok: true });
   }
 
-  // ===== DASHBOARD READS DATA =====
+  // Dashboard reads data
   if (req.method === "GET") {
-    return res.status(200).json(
-      globalThis.__VERTIGROW_STORE__.latest || { ph: 0, tds: 0 }
-    );
+    return res.status(200).json(globalThis.__VERTIGROW_LATEST__);
   }
 
   return res.status(405).end();
