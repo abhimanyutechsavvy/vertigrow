@@ -1,25 +1,20 @@
 // /api/data.js
-// FINAL: stores ONLY latest reading (serverless-safe)
+// Stores latest data in request lifecycle-safe way
 
-globalThis.__VERTIGROW_LATEST__ =
-  globalThis.__VERTIGROW_LATEST__ || { ph: 0, tds: 0, time: null };
+let latest = { ph: 0, tds: 0, time: null };
 
 export default function handler(req, res) {
-
-  // Arduino sends data
   if (req.method === "POST") {
-    globalThis.__VERTIGROW_LATEST__ = {
+    latest = {
       ph: Number(req.body.ph),
       tds: Number(req.body.tds),
       time: new Date().toISOString()
     };
-
     return res.status(200).json({ ok: true });
   }
 
-  // Dashboard reads data
   if (req.method === "GET") {
-    return res.status(200).json(globalThis.__VERTIGROW_LATEST__);
+    return res.status(200).json(latest);
   }
 
   return res.status(405).end();
