@@ -1,53 +1,47 @@
-console.log("✅ Frontend ai.js loaded");
+async function updateVitals() {
+  const res = await fetch("/api/data", { method: "POST" });
+  const data = await res.json();
 
-async function fetchVitals() {
-  const r = await fetch("/api/data");
-  const d = await r.json();
+  document.getElementById("phValue").innerText = data.ph.toFixed(2);
+  document.getElementById("tdsValue").innerText = data.tds;
 
-  document.getElementById("phValue").innerText =
-    d.ph ? d.ph.toFixed(2) : "--";
-  document.getElementById("tdsValue").innerText =
-    d.tds || "--";
+  const healthEl = document.getElementById("healthValue");
 
-  let h = "GOOD";
-  if (d.ph < 5.8 || d.ph > 6.5 || d.tds < 800 || d.tds > 1200) h = "BAD";
-  document.getElementById("healthValue").innerText = h;
+  let health = "GOOD";
+  let className = "good";
+
+  if (data.ph < 5.5 || data.ph > 6.8 || data.tds < 600 || data.tds > 1400) {
+    health = "BAD";
+    className = "bad";
+  } else if (
+    (data.ph >= 5.5 && data.ph < 5.8) ||
+    (data.ph > 6.5 && data.ph <= 6.8)
+  ) {
+    health = "MODERATE";
+    className = "warn";
+  }
+
+  healthEl.innerText = health;
+  healthEl.className = "value " + className;
 }
 
 async function sendAI() {
-  const input = document.getElementById("aiInput");
-  const reply = document.getElementById("aiReply");
+  const msg = document.getElementById("aiInput").value;
+  document.getElementById("aiReply").innerText = "Thinking…";
 
-  reply.innerText = "Thinking…";
-
-  const sensor = await fetch("/api/data").then(r => r.json());
-
-  const r = await fetch("/api/ai", {
+  const res = await fetch("/api/ai", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      message: input.value,
-      sensorData: sensor
-    })
+    body: JSON.stringify({ message: msg })
   });
 
-  const d = await r.json();
-  reply.innerText = d.reply;
-  input.value = "";
+  const data = await res.json();
+  document.getElementById("aiReply").innerText = data.reply;
 }
 
-async function downloadExcel() {
-  const r = await fetch("/api/export");
-  const blob = await r.blob();
-
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "vertigrow_report.xlsx";
-  a.click();
+function downloadExcel() {
+  window.location.href = "/api/export";
 }
 
-setInterval(fetchVitals, 3000);
-fetchVitals();
-
-window.sendAI = sendAI;
-window.downloadExcel = downloadExcel;
+setInterval(updateVitals, 3000);
+updateVitals();
