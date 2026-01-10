@@ -17,9 +17,7 @@
       --muted: #8b93b8;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -54,7 +52,6 @@
       text-shadow: 0 0 12px rgba(0, 247, 255, 0.5);
     }
 
-    /* ===== VITALS ===== */
     .vitals {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -88,7 +85,6 @@
     .warn { color: var(--warn); }
     .bad  { color: var(--bad); }
 
-    /* ===== INPUT ===== */
     input {
       width: 100%;
       padding: 14px;
@@ -102,11 +98,8 @@
       box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
     }
 
-    input::placeholder {
-      color: #7e86ad;
-    }
+    input::placeholder { color: #7e86ad; }
 
-    /* ===== BUTTON ===== */
     button {
       width: 100%;
       padding: 14px;
@@ -118,10 +111,9 @@
       color: #002b2e;
       background: linear-gradient(135deg, #00f7ff, #00c8d4);
       box-shadow: 0 10px 20px rgba(0,247,255,0.35);
-      margin-top: 5px;
+      margin-top: 6px;
     }
 
-    /* ===== AI REPLY ===== */
     .reply {
       margin-top: 16px;
       padding: 14px;
@@ -140,7 +132,6 @@
   <div class="panel">
     <h1>VertiGrow AI</h1>
 
-    <!-- ===== LIVE VITALS ===== -->
     <div class="vitals">
       <div class="card">
         <div>pH</div>
@@ -156,7 +147,6 @@
       </div>
     </div>
 
-    <!-- ===== AI CHAT ===== -->
     <input
       id="aiInput"
       type="text"
@@ -165,12 +155,13 @@
 
     <button onclick="sendAI()">Send</button>
 
+    <button onclick="downloadExcel()">Download Excel</button>
+
     <div class="reply" id="aiReply">
       AI response will appear here…
     </div>
   </div>
 
-  <!-- ===== FRONTEND LOGIC ===== -->
   <script src="/ai.js"></script>
 </body>
 </html>
