@@ -1,40 +1,38 @@
-export const config = {
-  runtime: "nodejs"
-};
+import XLSX from "xlsx";
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
+  if (req.method !== "GET") {
+    return res.status(405).json({ error: "Use GET" });
+  }
+
   try {
-    if (req.method !== "GET") {
-      return res.status(405).end();
-    }
-
-    const XLSX = require("xlsx");
     const history = globalThis.__VERTIGROW_HISTORY__ || [];
 
     if (!history.length) {
-      return res.end();
+      return res.status(200).send("No data available");
     }
 
-    const ws = XLSX.utils.json_to_sheet(history);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "VertiGrow");
+    const worksheet = XLSX.utils.json_to_sheet(history);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "VertiGrow");
 
-    const buffer = XLSX.write(wb, {
+    const buffer = XLSX.write(workbook, {
       type: "buffer",
       bookType: "xlsx"
     });
 
     res.setHeader(
-      "Content-Disposition",
-      "attachment; filename=vertigrow_report.xlsx"
-    );
-    res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=vertigrow_report.xlsx"
+    );
 
-    res.end(buffer);
-  } catch {
-    res.end();
+    res.status(200).send(buffer);
+  } catch (err) {
+    console.error("EXCEL ERROR:", err);
+    res.status(500).send("Excel export failed");
   }
 }
