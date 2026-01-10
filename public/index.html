@@ -6,9 +6,9 @@
 
   <style>
     :root {
-      --bg-main: #0a0f1e;
-      --bg-panel: rgba(18, 26, 47, 0.85);
-      --bg-card: rgba(11, 19, 43, 0.9);
+      --bg-main: #050812;
+      --bg-panel: rgba(18, 26, 47, 0.9);
+      --bg-card: rgba(11, 19, 43, 0.95);
       --accent: #00f7ff;
       --good: #00ff9c;
       --warn: #ffd000;
@@ -35,12 +35,9 @@
       width: 100%;
       max-width: 520px;
       background: var(--bg-panel);
-      backdrop-filter: blur(14px);
       border-radius: 16px;
       padding: 24px;
-      box-shadow:
-        0 0 0 1px rgba(0, 247, 255, 0.15),
-        0 20px 40px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 0 0 1px rgba(0,247,255,0.15), 0 20px 40px rgba(0,0,0,0.6);
     }
 
     h1 {
@@ -48,7 +45,7 @@
       text-align: center;
       font-size: 26px;
       color: var(--accent);
-      text-shadow: 0 0 12px rgba(0, 247, 255, 0.5);
+      text-shadow: 0 0 12px rgba(0,247,255,0.5);
     }
 
     .vitals {
@@ -63,9 +60,7 @@
       border-radius: 12px;
       padding: 14px;
       text-align: center;
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,0.05),
-        0 8px 18px rgba(0,0,0,0.5);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
     }
 
     .card div:first-child {
@@ -90,8 +85,8 @@
       border: none;
       background: var(--bg-card);
       color: #fff;
-      margin-bottom: 10px;
       font-size: 15px;
+      margin-bottom: 10px;
     }
 
     button {
@@ -102,17 +97,15 @@
       font-size: 16px;
       font-weight: 700;
       cursor: pointer;
-      margin-top: 10px;
-      color: #002b2e;
       background: linear-gradient(135deg, #00f7ff, #00c8d4);
+      margin-bottom: 10px;
     }
 
     .reply {
-      margin-top: 14px;
-      padding: 14px;
       min-height: 60px;
       background: var(--bg-card);
       border-radius: 12px;
+      padding: 14px;
       font-size: 14px;
     }
   </style>
@@ -122,7 +115,7 @@
   <div class="panel">
     <h1>VertiGrow AI</h1>
 
-    <!-- LIVE VITALS -->
+    <!-- VITALS -->
     <div class="vitals">
       <div class="card">
         <div>pH</div>
@@ -140,7 +133,7 @@
 
     <!-- AI -->
     <input id="aiInput" placeholder="Ask anything… add nutrients" />
-    <button onclick="sendAICommand()">Send</button>
+    <button onclick="sendAI()">Send</button>
 
     <div class="reply" id="aiReply">AI response will appear here…</div>
 
@@ -148,53 +141,72 @@
   </div>
 
   <script>
+    console.log("Frontend loaded");
+
     async function updateVitals() {
       try {
-        const res = await fetch("/api/data", { method: "POST" });
+        const res = await fetch("/api/data", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" }
+        });
+
         const data = await res.json();
 
-        document.getElementById("phValue").innerText = data.ph ?? "--";
-        document.getElementById("tdsValue").innerText = data.tds ?? "--";
+        document.getElementById("phValue").innerText =
+          data.ph !== undefined ? data.ph : "--";
 
-        const healthEl = document.getElementById("healthValue");
-        healthEl.className = "value";
+        document.getElementById("tdsValue").innerText =
+          data.tds !== undefined ? data.tds : "--";
+
+        const h = document.getElementById("healthValue");
+        h.className = "value";
 
         if (data.ph >= 5.8 && data.ph <= 6.5 && data.tds >= 800 && data.tds <= 1200) {
-          healthEl.innerText = "GOOD";
-          healthEl.classList.add("good");
+          h.innerText = "GOOD";
+          h.classList.add("good");
         } else if (
           (data.ph >= 5.5 && data.ph < 5.8) ||
           (data.ph > 6.5 && data.ph <= 6.8)
         ) {
-          healthEl.innerText = "MODERATE";
-          healthEl.classList.add("warn");
+          h.innerText = "MODERATE";
+          h.classList.add("warn");
         } else {
-          healthEl.innerText = "BAD";
-          healthEl.classList.add("bad");
+          h.innerText = "BAD";
+          h.classList.add("bad");
         }
-      } catch {
-        console.log("Vitals fetch failed");
+      } catch (e) {
+        console.error("Vitals error", e);
       }
     }
 
-    async function sendAICommand() {
-      const message = document.getElementById("aiInput").value;
-      if (!message) return;
-
-      document.getElementById("aiReply").innerText = "Thinking…";
+    async function sendAI() {
+      const msg = document.getElementById("aiInput").value;
+      document.getElementById("aiReply").innerText = "Thinking...";
 
       const res = await fetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message })
+        body: JSON.stringify({ message: msg })
       });
 
       const data = await res.json();
-      document.getElementById("aiReply").innerText = data.reply || "No response";
+      document.getElementById("aiReply").innerText = data.reply || "AI error";
     }
 
-    function downloadExcel() {
-      window.location.href = "/api/excel";
+    async function downloadExcel() {
+      try {
+        const res = await fetch("/api/export", { method: "POST" });
+        const blob = await res.blob();
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "vertigrow_report.xlsx";
+        a.click();
+        window.URL.revokeObjectURL(url);
+      } catch (e) {
+        alert("Excel export failed");
+      }
     }
 
     updateVitals();
