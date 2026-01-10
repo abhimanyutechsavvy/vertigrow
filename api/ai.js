@@ -1,45 +1,45 @@
+// /api/ai.js
+// VertiGrow AI backend (POST only)
+
 export const config = {
   runtime: "nodejs"
 };
 
 export default async function handler(req, res) {
   try {
-    // Allow only POST requests
+    // Allow POST only
     if (req.method !== "POST") {
-      return res.status(200).json({
-        reply: "Use POST method"
-      });
+      return res.status(200).json({ reply: "Use POST" });
     }
 
-    // Check OpenAI API key
+    // Check API key
     if (!process.env.OPENAI_API_KEY) {
       return res.status(200).json({
-        reply: "OPENAI KEY NOT FOUND"
+        reply: "OPENAI KEY MISSING"
       });
     }
 
-    // Read request body safely
+    // Read body safely
     const body = req.body || {};
     const message = body.message || "hi";
     const sensorData = body.sensorData || {};
 
-    // System prompt (safe, beginner friendly)
+    // System prompt with vitals
     const systemPrompt = `
-You are VertiGrow AI, a beginner-friendly hydroponics assistant.
+You are VertiGrow AI.
+Explain in very simple words.
 
 Current system vitals:
 - pH: ${sensorData.ph ?? "unknown"}
 - TDS: ${sensorData.tds ?? "unknown"}
 
-Rules:
-- Explain in simple words
-- Do NOT give wiring instructions
-- Do NOT give chemical quantities
-- Only give general advice and explanations
+Do not give wiring instructions.
+Do not give exact chemical quantities.
+Give only general advice.
 `;
 
-    // Call OpenAI using fetch (NO SDK)
-    const aiResponse = await fetch(
+    // Call OpenAI (NO SDK, fetch only)
+    const aiRes = await fetch(
       "https://api.openai.com/v1/chat/completions",
       {
         method: "POST",
@@ -58,28 +58,26 @@ Rules:
       }
     );
 
-    // Handle OpenAI API errors safely
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error("OpenAI API error:", errorText);
-
+    // Handle OpenAI error
+    if (!aiRes.ok) {
+      const errText = await aiRes.text();
+      console.error("OpenAI error:", errText);
       return res.status(200).json({
-        reply: "OpenAI API error"
+        reply: "AI service error"
       });
     }
 
-    // Parse AI response
-    const aiData = await aiResponse.json();
+    // Parse response
+    const data = await aiRes.json();
     const reply =
-      aiData?.choices?.[0]?.message?.content ||
-      "AI replied but no text was returned.";
+      data?.choices?.[0]?.message?.content ||
+      "No reply from AI";
 
-    // Send reply to frontend
+    // Send to frontend
     return res.status(200).json({ reply });
 
-  } catch (error) {
-    console.error("AI BACKEND ERROR:", error);
-
+  } catch (err) {
+    console.error("AI BACKEND ERROR:", err);
     return res.status(200).json({
       reply: "AI backend error"
     });
