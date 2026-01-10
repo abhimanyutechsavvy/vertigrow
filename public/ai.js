@@ -1,50 +1,56 @@
 async function fetchVitals() {
-  const res = await fetch("/api/data");
-  const data = await res.json();
+  try {
+    const res = await fetch("/api/data");
+    const data = await res.json();
 
-  const ph = Number(data.ph);
-  const tds = Number(data.tds);
+    // Update values
+    document.getElementById("phValue").innerText =
+      data.ph ? data.ph.toFixed(2) : "--";
 
-  document.getElementById("phValue").innerText =
-    isNaN(ph) ? "--" : ph.toFixed(2);
+    document.getElementById("tdsValue").innerText =
+      data.tds ? data.tds : "--";
 
-  document.getElementById("tdsValue").innerText =
-    isNaN(tds) ? "--" : tds;
+    // Health logic
+    let health = "GOOD";
+    if (data.ph < 5.8 || data.ph > 6.5 || data.tds < 800 || data.tds > 1200) {
+      health = "BAD";
+    }
 
-  let health = "GOOD";
-  if (ph < 5.5 || ph > 6.8 || tds < 700 || tds > 1400) {
-    health = "WARN";
+    document.getElementById("healthValue").innerText = health;
+
+  } catch (err) {
+    console.error("Vitals fetch failed", err);
   }
-  if (ph < 5 || ph > 7.2 || tds < 500 || tds > 1800) {
-    health = "BAD";
-  }
-
-  document.getElementById("healthValue").innerText = health;
 }
 
-async function sendAI() {
+/* ================= AI CHAT ================= */
+async function sendAICommand() {
   const input = document.getElementById("aiInput");
-  const reply = document.getElementById("aiReply");
+  const replyBox = document.getElementById("aiReply");
 
-  const message = input.value.trim();
-  if (!message) return;
+  replyBox.innerText = "Thinking...";
 
-  reply.innerText = "Thinking…";
+  try {
+    const sensorRes = await fetch("/api/data");
+    const sensorData = await sensorRes.json();
 
-  const sensorRes = await fetch("/api/data");
-  const sensorData = await sensorRes.json();
+    const res = await fetch("/api/ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: input.value,
+        sensorData
+      })
+    });
 
-  const res = await fetch("/api/ai", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message, sensorData })
-  });
+    const data = await res.json();
+    replyBox.innerText = data.reply;
 
-  const data = await res.json();
-  reply.innerText = data.reply || "No reply";
-
-  input.value = "";
+  } catch (err) {
+    replyBox.innerText = "AI is offline or error occurred";
+  }
 }
 
+/* ================= AUTO REFRESH ================= */
 setInterval(fetchVitals, 3000);
 fetchVitals();
