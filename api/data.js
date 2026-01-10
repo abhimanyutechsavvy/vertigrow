@@ -1,56 +1,28 @@
-export const config = {
-  runtime: "nodejs"
+// /api/data.js
+// THIS FILE MUST NOT RETURN "reply"
+
+let lastData = {
+  ph: 0,
+  tds: 0
 };
 
-export default async function handler(req, res) {
-  try {
-    if (req.method !== "POST") {
-      return res.status(200).json({ reply: "Use POST" });
-    }
+export default function handler(req, res) {
 
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(200).json({ reply: "OPENAI KEY MISSING" });
-    }
+  // Arduino sends data here
+  if (req.method === "POST") {
+    lastData = {
+      ph: Number(req.body.ph) || 0,
+      tds: Number(req.body.tds) || 0
+    };
 
-    const { message, sensorData } = req.body || {};
-    const userMessage = message || "hi";
-
-    const systemPrompt = `
-You are VertiGrow AI.
-Explain simply.
-
-Current vitals:
-pH: ${sensorData?.ph ?? "unknown"}
-TDS: ${sensorData?.tds ?? "unknown"}
-`;
-
-    const aiRes = await fetch(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          temperature: 0.4,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userMessage }
-          ]
-        })
-      }
-    );
-
-    const data = await aiRes.json();
-    const reply =
-      data?.choices?.[0]?.message?.content || "No AI reply";
-
-    return res.json({ reply });
-
-  } catch (err) {
-    console.error(err);
-    return res.json({ reply: "AI error" });
+    return res.status(200).json({ ok: true });
   }
+
+  // Website reads data here
+  if (req.method === "GET") {
+    return res.status(200).json(lastData);
+  }
+
+  // Anything else
+  return res.status(405).end("Method Not Allowed");
 }
