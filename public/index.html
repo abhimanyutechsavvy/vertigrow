@@ -45,7 +45,6 @@
       text-align: center;
       font-size: 26px;
       color: var(--accent);
-      text-shadow: 0 0 12px rgba(0,247,255,0.5);
     }
 
     .vitals {
@@ -60,7 +59,6 @@
       border-radius: 12px;
       padding: 14px;
       text-align: center;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
     }
 
     .card div:first-child {
@@ -132,31 +130,26 @@
     </div>
 
     <!-- AI -->
-    <input id="aiInput" placeholder="Ask anything… add nutrients" />
+    <input id="aiInput" placeholder="Ask anything…" />
     <button onclick="sendAI()">Send</button>
 
     <div class="reply" id="aiReply">AI response will appear here…</div>
 
-    <button onclick="downloadExcel()">Download Excel Report</button>
+    <button onclick="downloadExcel()">Download Excel</button>
   </div>
 
   <script>
-    console.log("Frontend loaded");
-
     async function updateVitals() {
       try {
-        const res = await fetch("/api/data", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" }
-        });
-
+        // ✅ USE GET (IMPORTANT FIX)
+        const res = await fetch("/api/data");
         const data = await res.json();
 
         document.getElementById("phValue").innerText =
-          data.ph !== undefined ? data.ph : "--";
+          Number(data.ph).toFixed(2);
 
         document.getElementById("tdsValue").innerText =
-          data.tds !== undefined ? data.tds : "--";
+          Number(data.tds);
 
         const h = document.getElementById("healthValue");
         h.className = "value";
@@ -193,20 +186,8 @@
       document.getElementById("aiReply").innerText = data.reply || "AI error";
     }
 
-    async function downloadExcel() {
-      try {
-        const res = await fetch("/api/export", { method: "POST" });
-        const blob = await res.blob();
-
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "vertigrow_report.xlsx";
-        a.click();
-        window.URL.revokeObjectURL(url);
-      } catch (e) {
-        alert("Excel export failed");
-      }
+    function downloadExcel() {
+      window.location.href = "/api/export";
     }
 
     updateVitals();
