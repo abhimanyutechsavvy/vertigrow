@@ -1,28 +1,23 @@
-// /api/data.js
-// THIS FILE MUST NOT RETURN "reply"
-
-let lastData = {
-  ph: 0,
-  tds: 0
-};
+globalThis.__VERTIGROW_HISTORY__ =
+  globalThis.__VERTIGROW_HISTORY__ || [];
 
 export default function handler(req, res) {
-
-  // Arduino sends data here
   if (req.method === "POST") {
-    lastData = {
+    globalThis.__VERTIGROW_HISTORY__.push({
       ph: Number(req.body.ph) || 0,
-      tds: Number(req.body.tds) || 0
-    };
+      tds: Number(req.body.tds) || 0,
+      time: new Date().toISOString()
+    });
 
-    return res.status(200).json({ ok: true });
+    if (globalThis.__VERTIGROW_HISTORY__.length > 500) {
+      globalThis.__VERTIGROW_HISTORY__.shift();
+    }
+
+    return res.json({ ok: true });
   }
 
-  // Website reads data here
-  if (req.method === "GET") {
-    return res.status(200).json(lastData);
-  }
+  const h = globalThis.__VERTIGROW_HISTORY__;
+  if (!h.length) return res.json({ ph: 0, tds: 0 });
 
-  // Anything else
-  return res.status(405).end("Method Not Allowed");
+  return res.json(h[h.length - 1]);
 }
