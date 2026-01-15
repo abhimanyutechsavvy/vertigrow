@@ -141,7 +141,6 @@
   <script>
     async function updateVitals() {
       try {
-        // ✅ USE GET (IMPORTANT FIX)
         const res = await fetch("/api/data");
         const data = await res.json();
 
@@ -154,19 +153,20 @@
         const h = document.getElementById("healthValue");
         h.className = "value";
 
-        if (data.ph >= 5.8 && data.ph <= 6.5 && data.tds >= 800 && data.tds <= 1200) {
+        // ✅ UPDATED TDS HEALTH LOGIC (ONLY CHANGE)
+        if (data.tds < 250) {
           h.innerText = "GOOD";
           h.classList.add("good");
-        } else if (
-          (data.ph >= 5.5 && data.ph < 5.8) ||
-          (data.ph > 6.5 && data.ph <= 6.8)
-        ) {
+
+        } else if (data.tds >= 250 && data.tds <= 300) {
           h.innerText = "MODERATE";
           h.classList.add("warn");
+
         } else {
           h.innerText = "BAD";
           h.classList.add("bad");
         }
+
       } catch (e) {
         console.error("Vitals error", e);
       }
